@@ -29,6 +29,9 @@ A simple host pinger console application with a web dashboard to monitor ping re
    ```bash
    # Install .NET SDK if not available
    make check-dotnet
+
+   # Install Nuget Packages
+   make restore
    
    # Build, publish and start the web application
    make start
