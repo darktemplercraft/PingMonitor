@@ -16,8 +16,8 @@ A simple host pinger console application with a web dashboard to monitor ping re
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd <repository-name>
+   git clone https://github.com/darktemplercraft/PingMonitor
+   cd PingMonitor
    ```
 
 2. **Navigate to the project folder**
