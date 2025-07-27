@@ -92,3 +92,23 @@ Pinger.Monitor/
 - Configurable ping intervals
 - Multiple host monitoring
 - Console-based ping execution
+
+## Nat's Notes
+
+### Technology Choices
+
+**Backend Framework**: I chose .NET for this project as it's the technology I'm most familiar with that provides excellent cross-platform support for Linux environments. This ensures reliable deployment across different operating systems.
+
+**Frontend Framework**: Blazor was selected for the web dashboard to minimize complexity and streamline deployment. The server-side rendering approach eliminates the need for separate API endpoints and simplifies the overall architecture. For a production project, I would likely opt for React to provide more flexibility and a richer ecosystem of components.
+
+**Data Storage**: The application uses in-memory caching for data storage to enable fast retrieval and avoid file system complications during environment deployments. This approach prioritizes simplicity and deployment reliability. In a production environment, this should be replaced with a proper database solution (SQL Server, PostgreSQL, etc.) for data persistence and scalability.
+
+**Chart Display**: The line chart currently displays ping results for only the last 3 minutes to focus on the most recent network performance data. This provides a clear view of current connectivity status without overwhelming the interface.
+
+### Future Enhancements
+
+- **Flexible Time Ranges**: Add user-configurable time range options (last 30 minutes, 1 hour, 24 hours, etc.) for the ping result charts
+- **Database Integration**: Implement proper database storage for historical data persistence
+- **Alert System**: Add notifications for ping failures or high latency thresholds
+- **Export Functionality**: Enable data export for reporting and analysis
+- **Advanced Filtering**: Implement filtering by host, time range, and status
