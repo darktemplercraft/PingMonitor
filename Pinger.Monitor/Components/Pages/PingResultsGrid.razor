@@ -1,0 +1,69 @@
+@page "/Dashboard"
+@using Pinger.Monitor.Models.Dto
+@using Pinger.Monitor.Services
+
+@inject IActivityService ActivityService
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Ping Results</h5>
+        <div class="table-responsive-scroll">
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">Host</th>
+                    <th scope="col">Port</th>
+                    <th scope="col">Ping Time</th>
+                    <th scope="col">Is Online</th>
+                    <th scope="col">Response Time</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Error Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var activity in PingData.PingResults)
+                {
+                    var rowClass = activity.IsOnline ? "" : "table-danger";
+                    <tr class="@rowClass">
+                        <td>@activity.Host</td>
+                        <td>@activity.Port</td>
+                        <td>@activity.Timestamp</td>
+                        <td>@activity.IsOnline</td>
+                        <td>@activity.PortResponseTime</td>
+                        <td>@activity.Status</td>
+                        <td>@activity.ErrorMessage</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            </div>
+    </div>
+</div>
+
+@code {
+    public required HostPingDataDto PingData { get; set; }
+
+    protected override void OnInitialized()
+    {
+        GetData();
+        
+        var timer = new System.Threading.Timer(
+            e =>
+            {
+                InvokeAsync(() =>
+                {
+                    GetData();
+                    StateHasChanged();
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(2)
+        );
+    }
+
+    private void GetData()
+    {
+        PingData = ActivityService.GetData();
+    }
+}
+

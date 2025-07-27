@@ -1,0 +1,54 @@
+@page "/chart"
+@using Pinger.Monitor.Models
+<div class="container">
+    <h2>@HostName</h2>
+    <BarChart @ref="barChart" Width="500" Height="300" />
+</div>
+
+@code {
+    
+    [Parameter]
+    public PingMetricsModel PingMetrics { get; set; }
+    [Parameter]
+    public string HostName { get; set; }
+    
+    private BarChart barChart = default!;
+    private BarChartOptions barChartOptions = default!;
+
+    private List<string> _hostBarChartLabels = new List<string>
+    {
+        "MaxPing",
+        "MinPing",
+        "AveragePing"
+    };
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RenderHostMetrics();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task RenderHostMetrics()
+    {
+        var data = new ChartData{ Labels = _hostBarChartLabels, Datasets = new List<IChartDataset>
+        {
+            new BarChartDataset
+            {
+                Data = new List<double?>{ (double)PingMetrics.MaxPing!, (double)PingMetrics.MinPing!, PingMetrics.AveragePing },
+                BackgroundColor = new List<string>{ "rgb(88, 80, 141)" },
+                CategoryPercentage = 0.8,
+                BarPercentage = 1,
+            }
+        } };
+        barChartOptions = new BarChartOptions { Responsive = true, Interaction = new Interaction { Mode = InteractionMode.Index } };
+
+        await barChart.InitializeAsync(data, barChartOptions);
+    }
+
+}
+
+

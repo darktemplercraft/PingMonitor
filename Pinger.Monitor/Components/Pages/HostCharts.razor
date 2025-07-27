@@ -1,0 +1,191 @@
+@using pinger.console.Models
+@using Pinger.Monitor.Models
+@using Pinger.Monitor.Services
+@inject IActivityService ActivityService
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Metrics Summary</h2>
+            <BarChart @ref="barChart" Width="500" Height="300"/>
+        </div>
+        <div class="col-md-6">
+            <h2>Ping Summary</h2>
+            <LineChart @ref="lineChart" Width="500" Height="300"></LineChart>
+            </div>
+        </div>
+</div>
+
+@code {
+    private Dictionary<string, PingMetricsModel> _pingMetrics { get; set; }
+    private List<HostPingResult> _pingResults { get; set; }
+    private BarChart barChart = default!;
+    private BarChartOptions barChartOptions = default!;
+    private LineChart lineChart = default!;
+    
+    private List<string> _hostBarChartLabels = new List<string>
+    {
+        "Max Ping",
+        "Min Ping",
+        "Average Ping"
+    };
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AppyBarChart(true);
+            await ApplyLineChart(true);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    
+    protected override void OnInitialized()
+    {
+        SetData();
+        
+        var timer = new System.Threading.Timer(
+            e =>
+            {
+                InvokeAsync(async () =>
+                {
+                    SetData();
+                    await AppyBarChart(false);
+                    await ApplyLineChart(false);
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(4)
+        );
+    }
+
+    private void SetData()
+    {
+        var activityData = ActivityService.GetData();
+        _pingResults = activityData.PingResults;
+        _pingMetrics = activityData.HostMetrics;
+
+        
+    }
+
+    private async Task ApplyLineChart(bool isFirstRender)
+    {
+        var currentTime = DateTime.Now;
+        var threeMinutesAgo = currentTime.AddMinutes(-3);
+        
+        // Get data from last 3 minutes
+        var recentData = _pingResults.Where(p => p.Timestamp >= threeMinutesAgo).ToList();
+        
+        // Create time labels (every 15 seconds for better resolution)
+        var labels = new List<string>();
+        var timePoints = new List<DateTime>();
+        
+        for (var time = threeMinutesAgo; time <= currentTime; time = time.AddSeconds(15))
+        {
+            labels.Add(time.ToString("HH:mm:ss"));
+            timePoints.Add(time);
+        }
+
+        var datasets = new List<LineChartDataset>();
+        var colors = new[] { "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40" };
+
+        var index = 0;
+        foreach (var host in _pingMetrics.Keys)
+        {
+            var hostData = recentData.Where(p => p.Host == host).ToList();
+            var color = colors[index % colors.Length];
+            
+            var dataPoints = new List<double?>();
+            foreach (var timePoint in timePoints)
+            {
+                // Find the closest ping result within 15 seconds
+                var closestPing = hostData
+                    .Where(p => Math.Abs((p.Timestamp - timePoint).TotalSeconds) <= 15)
+                    .OrderBy(p => Math.Abs((p.Timestamp - timePoint).TotalSeconds))
+                    .FirstOrDefault();
+                
+                dataPoints.Add(closestPing?.IsOnline == true ? closestPing.PortResponseTime : null);
+            }
+
+            datasets.Add(new LineChartDataset
+            {
+                Label = host,
+                Data = dataPoints,
+                BackgroundColor = color,
+                BorderColor = color,
+                BorderWidth = 2,
+                Fill = false,
+                PointRadius = [3],
+                PointHoverRadius = [5],
+                Tension = 0.1
+            });
+            
+            index++;
+        }
+
+        var chartData = new ChartData
+        {
+            Labels = labels,
+            Datasets = datasets.ToList<IChartDataset>()
+        };
+        
+        var options = new LineChartOptions();
+
+        options.Interaction.Mode = InteractionMode.Index;
+
+        options.Plugins.Title!.Text = "Last 3 Mins Pings";
+        options.Plugins.Title.Display = true;
+        options.Plugins.Title.Font = new ChartFont { Size = 20 };
+
+        options.Responsive = true;
+
+        options.Scales.X!.Title = new ChartAxesTitle { Text = "Time Lapse", Display = true };
+        options.Scales.Y!.Title = new ChartAxesTitle { Text = "Response Time", Display = true };
+
+        if (isFirstRender)
+        {
+            await lineChart.InitializeAsync(chartData, options);
+        }else
+        {
+            await lineChart.UpdateAsync(chartData, options);
+        }
+    }
+
+    private async Task AppyBarChart(bool isFirstRender)
+    {
+        var chartDataSets = _pingMetrics
+            .OrderBy(_ => _.Key)
+            .Select(_ => MapMetricsBarChartData(_.Key, _.Value))
+            .ToList<IChartDataset>();
+        
+        var data = new ChartData
+        {
+            Labels = _hostBarChartLabels,
+            Datasets = chartDataSets,
+        };
+        
+        barChartOptions = new BarChartOptions { Responsive = true, Interaction = new Interaction { Mode = InteractionMode.Index } };
+        
+        if(isFirstRender)
+        {
+            await barChart.InitializeAsync(data, barChartOptions);
+        }
+        else
+        {
+            await barChart.UpdateAsync(data, barChartOptions);
+        }
+    }
+
+    private BarChartDataset MapMetricsBarChartData(string hostName, PingMetricsModel data)
+    {
+        return new BarChartDataset
+        {
+            Data = [(double)data.MaxPing!, (double)data.MinPing!, data.AveragePing],
+            Label = hostName,
+            CategoryPercentage = 0.8,
+            BarPercentage = 1,
+        };
+    }
+}
