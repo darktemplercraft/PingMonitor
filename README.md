@@ -115,3 +115,4 @@ Pinger.Monitor/
 - **Alert System**: Add notifications for ping failures or high latency thresholds
 - **Export Functionality**: Enable data export for reporting and analysis
 - **Advanced Filtering**: Implement filtering by host, time range, and status
+- **Automated Tests**: Implement automated tests
